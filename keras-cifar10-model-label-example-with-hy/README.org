@@ -294,7 +294,9 @@ bottom for a video demonstration of Emacs interaction.
 
 * a quick video
 
-  in [[file:lffR67vgRC.mp4][this short video]] you can see how one might load the resulting
+  [[file:lffR67vgRC.mp4.gif]]
+  
+  in this short video you can see how one might load the resulting
   =hylang= file into emacs and run it through the hy REPL, evaluating
   the statement on point (which show up as =^X ^E= in the key
   overlay), and otherwise swiching back and forth between the REPL
@@ -331,7 +333,7 @@ bottom for a video demonstration of Emacs interaction.
   assignment =let/with= syntax.
 
   A ready-to-run example can be found [[https://platform.rescale.com/tutorials/keras-cifar10-model-label-example-with-hy/clone][here]]. In addition, a tanglable
-  version of this post can be found here
+  version of this post can be found [[https://github.com/alexhrescale/rescale-examples/tree/master/keras-cifar10-model-label-example-with-hy][on github]].
 
 * pardon the pun
 
