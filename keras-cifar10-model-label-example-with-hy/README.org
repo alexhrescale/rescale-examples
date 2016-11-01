@@ -1,0 +1,347 @@
+As a long-time [[https://www.gnu.org/software/emacs/][GNU Emacs]] user, I have come to take =C-x C-e=
+(=eval-last-sexp=) for granted. That is, in almost any file that I'm
+editing, I can insert a parentheses expression whereever I am, hit
+=C-x C-e=, and get a result displayed in the minibuffer (or if
+programming in a lisp, in the REPL).
+
+Many other languages provide console interfaces or REPLs, but they
+usually come as a separate feature of the language rather than an
+assumed mode of interaction. I'll admit that this is a superficial
+observation, but one could reframe this terms of a "script-centric" or
+a "REPL-centric" approach to user interaction. Imagine yourself
+learning a new programming language. A "script-centric" approach would
+quickly introduce you how to run a hello world program from a terminal
+(or IDE), whereas a "REPL-centric" approach would quickly introduce
+you how to drop into a REPL and evaluate the requisite expressions to
+achieve the hello world effect.
+
+In other words, a "script-centric" approach conceptually separates the
+editing and evaluation cycles, whereas the "REPL-centric" approach is
+designed around a single flow of expression, evaluation, and
+feedback. Each method has its strengths and weaknesses, but for
+prototyping and experimentation, it's hard to beat the feeling of
+"being with the code" from evaluating code right at the cursor. In
+Emacs, for languages in the lisp family, this is almost the assumed
+method of interaction.
+
+How might we demonstrate this? Well, my colleague Mark [[https://blog.rescale.com/neural-networks-using-keras-on-rescale/][wrote a
+tutorial]] on setting up a Keras training job back in February. Since
+the software has been updated since then, we'll create an updated
+version of that job, but instead of raw python, we'll use [[hylang.org][hylang]],
+which is basically a [[https://en.wikipedia.org/wiki/Hy][lisp for the Python interpreter]].
+
+Assuming you have a recent version of Emacs running (say, version 24
+and up) with the Emacs [[https://github.com/melpa/melpa][package manager set up]], you would want to
+install [[https://github.com/hylang/hy-mode][hy-mode]] (=M-x package-install RET hy-mode RET=), and one of
+the many lispy paren packages, e.g. [[http://mumble.net/~campbell/emacs/paredit.el][paredit]], [[https://github.com/Fuco1/smartparens][smartparens]], [[https://github.com/abo-abo/lispy][lispy]].
+
+In our new file, =cifar10_cnn.hy=, make sure you are on =Hy=
+mode. Then use =M-x inferior-lisp= to start a hy repl! Scroll to the
+bottom for a video demonstration of Emacs interaction.
+
+* first let's take care of the imports
+
+** python
+
+#+BEGIN_SRC python :eval never :tangle cifar10_cnn.py
+  from __future__ import print_function
+  from keras.datasets import cifar10
+  from keras.models import Sequential
+  from keras.layers.core import Dense, Dropout, Activation, Flatten
+  from keras.layers.convolutional import Convolution2D, MaxPooling2D
+  from keras.optimizers import SGD, Adadelta, Adagrad
+  from keras.utils import np_utils, generic_utils
+  from six.moves import range
+#+END_SRC
+
+** Rewriting this in hy:
+
+   
+
+#+BEGIN_SRC hy :eval never :tangle cifar10_cnn.hy
+  (import [__future__ [print_function]]
+          [keras.datasets [cifar10]]
+          [keras.models [Sequential]]
+          [keras.layers.core [Dense Dropout Activation Flatten]]
+          [keras.layers.convolutional [Convolution2D MaxPooling2D]]
+          [keras.optimizers [SGD Adadelta Adagrad]]
+          [keras.utils [np_utils generic_utils]]
+          [six.moves [range]]
+          [numpy :as np])
+#+END_SRC
+
+   51 words to 39. Not bad for succinctness!
+
+* then let's rewrite the constants
+
+** python
+
+#+BEGIN_SRC python :eval never :tangle cifar10_cnn.py
+  batch_size = 32
+  nb_classes = 10
+  nb_epoch = 100
+
+  # input image dimensions
+  img_rows, img_cols = 32, 32
+  # the CIFAR10 images are RGB
+  img_channels = 3
+
+#+END_SRC
+
+** hy
+
+#+BEGIN_SRC hy :eval never :tangle cifar10_cnn.hy
+  (def batch_size 32
+       nb_classes 10
+       nb_epoch 100
+       
+       ;; input image dimensions
+       img_rows 32
+       img_cols 32
+       
+       ;; the CIFAR10 images are RGB
+       img_channels 3)
+#+END_SRC
+
+   hylang takes inspiration from [[http://clojure.org/][Clojure]], but unlike Clojure, allows multiple variable =def=-s by default. In this case it's quite handy.
+
+* the functions
+  
+  *NOTE* the =input_shape= argument ordering has changed since the previous version from =(channels, rows, columns)= to =(rows, columns, channels)=
+
+** python
+
+#+BEGIN_SRC python :eval never :tangle cifar10_cnn.py
+  def load_dataset():
+      # the data, shuffled and split between train and test sets
+      (X_train, y_train), (X_test, y_test) = cifar10.load_data()
+      print('X_train shape:', X_train.shape)
+      print(X_train.shape[0], 'train samples')
+      print(X_test.shape[0], 'test samples')
+
+      # convert class vectors to binary class matrices
+      Y_train = np_utils.to_categorical(y_train, nb_classes)
+      Y_test = np_utils.to_categorical(y_test, nb_classes)
+
+      X_train = X_train.astype('float32')
+      X_test = X_test.astype('float32')
+      X_train /= 255
+      X_test /= 255
+
+      return X_train, Y_train, X_test, Y_test
+
+
+  def make_network():
+      model = Sequential()
+
+      model.add(Convolution2D(32, 3, 3, border_mode='same',
+                              input_shape=(img_rows, img_cols, img_channels)))
+      model.add(Activation('relu'))
+      model.add(Convolution2D(32, 3, 3))
+      model.add(Activation('relu'))
+      model.add(MaxPooling2D(pool_size=(2, 2)))
+      model.add(Dropout(0.25))
+
+      model.add(Convolution2D(64, 3, 3, border_mode='same'))
+      model.add(Activation('relu'))
+      model.add(Convolution2D(64, 3, 3))
+      model.add(Activation('relu'))
+      model.add(MaxPooling2D(pool_size=(2, 2)))
+      model.add(Dropout(0.25))
+
+      model.add(Flatten())
+      model.add(Dense(512))
+      model.add(Activation('relu'))
+      model.add(Dropout(0.5))
+      model.add(Dense(nb_classes))
+      model.add(Activation('softmax'))
+
+      return model
+
+
+  def train_model(model, X_train, Y_train, X_test, Y_test):
+
+      sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+      model.compile(loss='categorical_crossentropy', optimizer=sgd)
+
+      model.fit(X_train, Y_train, nb_epoch=nb_epoch, batch_size=batch_size,
+                validation_split=0.1, show_accuracy=True, verbose=1)
+
+      print('Testing...')
+      res = model.evaluate(X_test, Y_test,
+                           batch_size=batch_size, verbose=1, show_accuracy=True)
+      print('Test accuracy: {0}'.format(res[1]))
+
+
+  def save_model(model):
+      model_json = model.to_json()
+      open('cifar10_architecture.json', 'w').write(model_json)
+      model.save_weights('cifar10_weights.h5', overwrite=True)
+
+#+END_SRC
+
+** hy
+
+   In the code below, we could have written the variable destructuring
+   for =TRAIN= and =TEST= with a single step like so:
+
+   =(let [ [[X-train y-train] [X-test y-test]] (cifar10.load_data) ] )=
+
+#+BEGIN_SRC hy :eval never :tangle cifar10_cnn.hy
+  (defn load-dataset []
+    ;; the data, shuffled and split between train and test sets
+    (let [[TRAIN TEST] (cifar10.load_data)
+          [X-train y-train] TRAIN
+          [X-test y-test] TEST
+
+          ;; convert class vectors to binary class matrices
+          Y-train (np_utils.to_categorical y-train nb_classes)
+          Y-test (np_utils.to_categorical y-test nb_classes)]
+      (print "OK")
+      (print "X_train shape: " X-train.shape)
+      (print (get X-train.shape 0) "train samples")
+      (print (get X-test.shape 0) "test samples")
+
+      ;; hy tuple notation
+      (, X-train Y-train X-test Y-test)))
+
+  (defn make-network []
+    (doto (Sequential)
+          (.add (Convolution2D
+                 32 3 3
+                 :border_mode "same"
+                 :input_shape (, img_rows img_cols img_channels)))
+          (.add (Activation "relu"))
+          (.add (Convolution2D 32 3 3))
+          (.add (Activation "relu"))
+          (.add (MaxPooling2D :pool_size (, 2 2)))
+          (.add (Dropout 0.25))
+
+          (.add (Convolution2D 64 3 3 :border_mode "same"))
+          (.add (Activation "relu"))
+          (.add (Convolution2D 64 3 3))
+          (.add (Activation "relu"))
+          (.add (MaxPooling2D :pool_size (, 2 2)))
+          (.add (Dropout 0.25))
+
+          (.add (Flatten))
+          (.add (Dense 512))
+          (.add (Activation "relu"))
+          (.add (Dropout 0.5))
+          (.add (Dense nb_classes))
+          (.add (Activation "softmax"))))
+
+  (defn train-model [model X-train Y-train X-test Y-test]
+    (let [sgd (SGD :lr 0.01 :decay 1e-6 :momentum 0.9 :nesterov true)]
+      (doto model
+            (.compile :loss "categorical_crossentropy" :optimizer sgd)
+            (.fit X-train Y-train
+                  :nb_epoch nb_epoch :batch_size batch_size
+                  :validation_split 0.1 :show_accuracy true
+                  :verbose 1)))
+    (print "Testing...")
+    (let [res (model.evaluate X-test Y-test
+                              :batch_size batch_size
+                              :verbose 1
+                              :show_accuracy true)]
+      (-> "Test accuracy {}"
+          (.format (get res 1))
+          (print))))
+
+  (defn save-model [model]
+    (with [ofile (open "cifar10_architecture.json" "w")]
+          (ofile.write (model.to_json)))
+    (model.save_weights "cifar10_weights.h5"
+                        :overwrite true))
+#+END_SRC
+
+   Notice how using =doto= here really simplifies repetitive
+   assignment.  Since expressions evaluate to the final form inside
+   them, which gets passed through by =doto=, our model setup in
+   =make-network= doesn't even require a variable name.
+
+   hylang also imports the handy [[http://docs.hylang.org/en/latest/language/api.html#id2][threading macros (->)]] from [[http://clojure.org/guides/threading_macros][clojure]],
+   which makes it easy to chain statements together; in this example
+   we just thread the format string through the =.format= function,
+   then print it.
+
+* the main runner block
+
+** python
+
+#+BEGIN_SRC python :eval never :tangle cifar10_cnn.py
+  if __name__ == '__main__':
+      X_train, Y_train, X_test, Y_test = load_dataset()
+      model = make_network()
+      train_model(model, X_train, Y_train, X_test, Y_test)
+      save_model(model)
+
+#+END_SRC
+
+** hy
+
+#+BEGIN_SRC hy :eval never :tangle cifar10_cnn.hy
+  (when (= --name-- "__main__")
+    ;; added for reproducibility
+    (np.random.seed 1)
+    
+    (let [[X-train Y-train X-test Y-test] (load-dataset)]
+      (doto (make-network)
+            (train-model X-train Y-train X-test Y-test)
+            (save-model))))
+
+#+END_SRC
+
+* a quick video
+
+  in [[file:lffR67vgRC.mp4][this short video]] you can see how one might load the resulting
+  =hylang= file into emacs and run it through the hy REPL, evaluating
+  the statement on point (which show up as =^X ^E= in the key
+  overlay), and otherwise swiching back and forth between the REPL
+  and the edit buffer.
+
+  Towards the end, you can see how I missed the =numpy= import, added
+  the import to the =(import ...)= form, and re-evaluated the entire
+  import form. I moved the cursor to the end of the form and used
+  =eval-last-sexp= for evaluate the expression, but could have also
+  used =Ctrl Alt x= or =lisp-eval-defun=, which would evaluate the top
+  level expression surround the cursor.
+  
+  Since =load-dataset= and =make-network= take no arguments, it is
+  convenient to wrap the function bodies in a =let= or =doto=
+  expression (or /form/), repeatedly evaulating the block at-point,
+  checking the REPL output, and when satisfied, wrap the =let= block
+  into a =defn= form.
+
+* running it on the platform
+
+  The video stops right after I start the actual model training,
+  because my computer doesn't have a good GPU, and the training would
+  take a long time. So instead we'll put it back on the Rescale
+  platform to complete, first installing the =hy= compiler by running
+
+  =pip install git+https://github.com/hylang/hy.git=
+
+  then simply calling =hy cifar10_cnn.hy= to replicate Mark's previous
+  example output.
+
+  (note that in this example, we're running the latest version
+  (version 0.11.0, commit 0abc218) of hylang directly from github). If
+  you installed hy using =pip install hy= it may be using an older
+  assignment =let/with= syntax.
+
+  A ready-to-run example can be found [[https://platform.rescale.com/tutorials/keras-cifar10-model-label-example-with-hy/clone][here]]. In addition, a tanglable
+  version of this post can be found here
+
+* pardon the pun
+
+  But is it hy time? As you can see, the REPL integration into Emacs
+  has its quirks. Debugging errors from deep stack traces is also a
+  bit more challenging due to less support from mature debugging
+  tools. But if you enjoy working with lisps and want or need to work
+  with the python ecosystem, hy is a functional, powerful, and
+  enjoyable tool to use, for web development, machine learning, or
+  plain old text parsing. Did I mention you can even mix and match
+  =hy= files and =py= files?
+  
+  
