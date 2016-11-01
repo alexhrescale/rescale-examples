@@ -307,7 +307,7 @@ bottom for a video demonstration of Emacs interaction.
   import form. I moved the cursor to the end of the form and used
   =eval-last-sexp= for evaluate the expression, but could have also
   used =Ctrl Alt x= or =lisp-eval-defun=, which would evaluate the top
-  level expression surround the cursor.
+  level expression surrounding the cursor.
   
   Since =load-dataset= and =make-network= take no arguments, it is
   convenient to wrap the function bodies in a =let= or =doto=
