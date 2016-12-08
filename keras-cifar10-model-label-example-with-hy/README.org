@@ -299,7 +299,7 @@ bottom for a video demonstration of Emacs interaction.
   in this short video you can see how one might load the resulting
   =hylang= file into emacs and run it through the hy REPL, evaluating
   the statement on point (which show up as =^X ^E= in the key
-  overlay), and otherwise swiching back and forth between the REPL
+  overlay), and otherwise switching back and forth between the REPL
   and the edit buffer.
 
   Towards the end, you can see how I missed the =numpy= import, added
@@ -311,7 +311,7 @@ bottom for a video demonstration of Emacs interaction.
   
   Since =load-dataset= and =make-network= take no arguments, it is
   convenient to wrap the function bodies in a =let= or =doto=
-  expression (or /form/), repeatedly evaulating the block at-point,
+  expression (or /form/), repeatedly evaluating the block at-point,
   checking the REPL output, and when satisfied, wrap the =let= block
   into a =defn= form.
 
